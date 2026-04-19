@@ -1,0 +1,4 @@
+﻿#ifndef SUPPORT_FUNCTION
+#define SUPPORT_FUNCTION
+
+#endif // SUPPORT_FUNCTION
