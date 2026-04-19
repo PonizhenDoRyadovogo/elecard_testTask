@@ -13,6 +13,6 @@ struct RgbImage {
 	RgbImage() : width(0), height(0) {}
 };
 
-RgbImage 
+RgbImage readBmp24(const std::string& path);
 
 #endif // BMP_READER
