@@ -4,6 +4,8 @@ project(yuv_overlay_test)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+find_package(Threads REQUIRED)
+
 add_executable(yuv_overlay
     main.cpp
     bmp_reader.cpp

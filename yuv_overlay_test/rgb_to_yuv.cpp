@@ -2,6 +2,9 @@
 #include "support_function.h"
 
 #include <stdexcept>
+#include <thread>
+#include <vector>
+#include <algorithm>
 
 namespace {
     inline uint8_t rgbToY(uint8_t r, uint8_t g, uint8_t b) {
@@ -33,7 +36,56 @@ Yuv420Image convertRgbToYuv420(const RgbImage& rgb) {
 
     Yuv420Image yuv = createYuv420Image(rgb.width, rgb.height);
 
-    for (int j = 0; j < rgb.height; j += 2) {
+    unsigned int threadCount = std::thread::hardware_concurrency();
+    if (threadCount == 0) {
+        threadCount = 4;
+    }
+
+    const int blockRowCount = rgb.height / 2;
+    if (threadCount > static_cast<unsigned int>(blockRowCount)) {
+        threadCount = static_cast<unsigned int>(blockRowCount);
+    }
+    if (threadCount == 0) {
+        threadCount = 1;
+    }
+    
+    std::vector<std::thread> workers;
+    workers.reserve(threadCount);
+
+    const int blocksPerThread = blockRowCount / static_cast<int>(threadCount);
+    const int extraBlocks = blockRowCount % static_cast<int>(threadCount);
+
+    int currentBlock = 0;
+
+    for (unsigned int t = 0; t < threadCount; ++t) {
+        const int myBlockCount = blocksPerThread + (t < static_cast<unsigned int>(extraBlocks) ? 1 : 0);
+
+        const int jBegin = currentBlock * 2;
+        const int jEnd = (currentBlock + myBlockCount) * 2;
+        currentBlock += myBlockCount;
+
+        workers.push_back(std::thread(
+            convertRgbBlockRange,
+            std::cref(rgb),
+            std::ref(yuv),
+            jBegin,
+            jEnd
+        ));
+    }
+
+    for (size_t i = 0; i < workers.size(); ++i) {
+        workers[i].join();
+    }
+
+    return yuv;
+}
+
+void convertRgbBlockRange(const RgbImage& rgb,
+    Yuv420Image& yuv,
+    int jBegin,
+    int jEnd)
+{
+    for (int j = jBegin; j < jEnd; j += 2) {
         for (int i = 0; i < rgb.width; i += 2) {
             int uSum = 0;
             int vSum = 0;
@@ -59,6 +111,4 @@ Yuv420Image convertRgbToYuv420(const RgbImage& rgb) {
             yuv.v[uvIdx] = static_cast<uint8_t>(vSum / 4);
         }
     }
-
-    return yuv;
 }
